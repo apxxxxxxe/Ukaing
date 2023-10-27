@@ -1,0 +1,15 @@
+charset,UTF-8
+file,.cargo/config.toml738f78dec909c779833582a3712fd180size=40date=2012-12-21T00:00:00
+file,.gitattributes015cf3017a3fb395737ff362511a89b0size=27date=2012-12-21T00:00:00
+file,Cargo.lock5cc9b0463c3542e38ac568802f895f05size=43398date=2012-12-21T00:00:00
+file,Cargo.tomlaa7c69e1db605ab1b9a0092ebf84f97fsize=820date=2012-12-21T00:00:00
+file,LICENSEbbb30328887c2ea315dfb4925e0664e8size=1066date=2012-12-21T00:00:00
+file,descript.txte118be12d02d52aceee2225e11878f90size=734date=2012-12-21T00:00:00
+file,install.txt9aa36059abc587e34f5b08896b2091b7size=55date=2012-12-21T00:00:00
+file,readme.txt3add6bb16dbc7d087447085f1921f0f1size=1615date=2012-12-21T00:00:00
+file,src/client.rs529b95aea8963e43ac21efd03afb7a66size=5693date=2012-12-21T00:00:00
+file,src/events.rsb6da0fa8dca31f5b52ec3dcaef515ee9size=3748date=2012-12-21T00:00:00
+file,src/lib.rs785d500d90f74741adf40e654c705e9csize=4368date=2012-12-21T00:00:00
+file,src/request.rsd63aa1eeaa34f280539f8d2ed88a48efsize=1119date=2012-12-21T00:00:00
+file,src/response.rs0044ebf381c64aa92fdef5251e6c4afcsize=2504date=2012-12-21T00:00:00
+file,ukaing.dllfb115462e8060fc57113eac3944c5451size=466432date=2012-12-21T00:00:00
