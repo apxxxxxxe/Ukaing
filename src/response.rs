@@ -32,10 +32,4 @@ impl PluginResponse {
             },
         }
     }
-
-    pub fn new_nocontent() -> PluginResponse {
-        let mut r = PluginResponse::new();
-        r.response.status = Status::NoContent;
-        r
-    }
 }

@@ -2,6 +2,7 @@ mod client;
 mod events;
 mod request;
 mod response;
+mod variables;
 
 use client::RpcClient;
 use request::PluginRequest;

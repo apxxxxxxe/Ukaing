@@ -1,9 +1,10 @@
 use chrono::Local;
-use shiorust::message::{parts::HeaderName, traits::*, Request};
+use shiorust::message::{parts::HeaderName, parts::*, traits::*, Request};
 
 use std::{path::PathBuf, str::FromStr};
 
 use crate::response::PluginResponse;
+use crate::variables::get_global_vars;
 use crate::RPCCLIENT;
 
 use encoding_rs::{SHIFT_JIS, UTF_8};
@@ -55,19 +56,15 @@ pub fn handle_request(req: &Request) -> PluginResponse {
         "OnGhostBoot" => on_ghost_boot,
         "OnGhostExit" => on_ghost_exit,
         "OnMenuExec" => on_exec_menu,
-        _ => return PluginResponse::new_nocontent(),
+        "OnSecondChange" => on_second_change,
+        _ => return new_response_nocontent(),
     };
 
     event(req)
 }
 
 fn version(_req: &Request) -> PluginResponse {
-    let mut r = PluginResponse::new();
-    r.response.headers.insert(
-        HeaderName::from("Script"),
-        String::from(env!("CARGO_PKG_VERSION")),
-    );
-    r
+    new_response_with_script(String::from(env!("CARGO_PKG_VERSION")), false)
 }
 
 fn on_ghost_boot(req: &Request) -> PluginResponse {
@@ -76,7 +73,7 @@ fn on_ghost_boot(req: &Request) -> PluginResponse {
         .get(&HeaderName::from_str("Reference1").unwrap())
     {
         Some(reference1) => reference1,
-        None => return PluginResponse::new_nocontent(),
+        None => return new_response_nocontent(),
     };
 
     let reference4 = match req
@@ -84,7 +81,7 @@ fn on_ghost_boot(req: &Request) -> PluginResponse {
         .get(&HeaderName::from_str("Reference4").unwrap())
     {
         Some(reference4) => reference4,
-        None => return PluginResponse::new_nocontent(),
+        None => return new_response_nocontent(),
     };
 
     let ghost_name = reference1.as_str();
@@ -112,7 +109,7 @@ fn on_ghost_boot(req: &Request) -> PluginResponse {
         );
     }
 
-    PluginResponse::new_nocontent()
+    new_response_nocontent()
 }
 
 fn on_ghost_exit(req: &Request) -> PluginResponse {
@@ -122,7 +119,7 @@ fn on_ghost_exit(req: &Request) -> PluginResponse {
 
     let ghost_name = match reference1 {
         Some(reference1) => reference1,
-        None => return PluginResponse::new_nocontent(),
+        None => return new_response_nocontent(),
     };
 
     debug!("ghost_name: {}", ghost_name);
@@ -130,17 +127,46 @@ fn on_ghost_exit(req: &Request) -> PluginResponse {
         RPCCLIENT.remove_ghost(ghost_name.to_string());
     }
 
-    PluginResponse::new_nocontent()
+    new_response_nocontent()
 }
 
 fn on_exec_menu(_req: &Request) -> PluginResponse {
-    let mut r = PluginResponse::new();
-
     let s = format!(
         "\\_qukaing v{}\\n\\n\\q[✕,]",
         String::from(env!("CARGO_PKG_VERSION"))
     );
 
-    r.response.headers.insert(HeaderName::from("Script"), s);
+    new_response_with_script(s, false)
+}
+
+fn on_second_change(_req: &Request) -> PluginResponse {
+    let vars = get_global_vars();
+
+    let update: String;
+    if !vars.is_update_checked {
+        update = format!("\\C\\![updateother,--plugin={}]", vars.plugin_name);
+        vars.is_update_checked = true;
+    } else {
+        update = String::new();
+    }
+
+    if !update.is_empty() {
+        new_response_with_script(update, false)
+    } else {
+        new_response_nocontent()
+    }
+}
+
+fn new_response_nocontent() -> PluginResponse {
+    let mut r = PluginResponse::new();
+    r.response.status = Status::NoContent;
+    r
+}
+
+fn new_response_with_script(script: String, _use_translate: bool) -> PluginResponse {
+    let mut r = PluginResponse::new();
+    r.response
+        .headers
+        .insert(HeaderName::from("Script"), script);
     r
 }
