@@ -4,6 +4,7 @@ use discord_rich_presence::{
     DiscordIpc, DiscordIpcClient,
 };
 use std::sync::{Arc, Condvar, Mutex};
+use url::Url;
 
 const TOKEN: &str = "1033946714102562826";
 const BUTTON_LABEL: &str = "Craftman URL";
@@ -82,7 +83,7 @@ impl RpcClient {
                             let mut activity = Activity::new()
                                 .state(&ghost_name)
                                 .timestamps(Timestamps::new().start(*timestamp));
-                            if craftmanurl != "" {
+                            if is_valid_url(craftmanurl) {
                                 activity =
                                     activity.buttons(vec![Button::new(BUTTON_LABEL, craftmanurl)]);
                             }
@@ -156,4 +157,8 @@ impl RpcClient {
         *lock.lock().unwrap() = true;
         cvar.notify_all();
     }
+}
+
+fn is_valid_url(url: &str) -> bool {
+    Url::parse(url).is_ok()
 }
