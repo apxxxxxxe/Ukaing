@@ -9,12 +9,12 @@ use request::PluginRequest;
 
 use std::fs::File;
 use std::panic;
-use std::path::Path;
+use std::path::PathBuf;
 
 use once_cell::sync::Lazy;
 
 use winapi::ctypes::c_long;
-use winapi::shared::minwindef::{BOOL, HGLOBAL, TRUE};
+use winapi::shared::minwindef::{BOOL, FALSE, HGLOBAL, TRUE};
 
 use shiori_hglobal::*;
 use shiorust::message::Parser;
@@ -25,14 +25,34 @@ extern crate simplelog;
 
 use simplelog::*;
 
-static mut RPCCLIENT: Lazy<RpcClient> = Lazy::new(|| RpcClient::new());
+static mut RPCCLIENT: Lazy<RpcClient> = Lazy::new(RpcClient::new);
 
 #[no_mangle]
 pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
     let v = GStr::capture(h, len as usize);
-    let s = v.to_utf8_str().unwrap();
+    let s: String;
+    match v.to_utf8_str() {
+        Ok(st) => {
+            // UTF-8に変換
+            s = st.to_string();
+        }
+        Err(e) => {
+            eprintln!("Failed to convert HGLOBAL to UTF-8: {:?}", e);
+            match v.to_ansi_str() {
+                Ok(st) => {
+                    // ANSIに変換
+                    s = st.to_string_lossy().to_string();
+                }
+                Err(e) => {
+                    eprintln!("Failed to convert HGLOBAL to ANSI: {:?}", e);
+                    return FALSE;
+                }
+            }
+        }
+    };
 
-    let log_path = Path::new(s).join("ukaing.log");
+    // Windows(UTF-16)を想定しPathBufでパスを作成
+    let log_path = PathBuf::from(&s).join("ukaing.log");
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
@@ -47,24 +67,24 @@ pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
     debug!("load");
     unsafe { RPCCLIENT.start() };
 
-    return TRUE;
+    TRUE
 }
 
 #[no_mangle]
 pub extern "cdecl" fn unload() -> BOOL {
     debug!("unload");
     unsafe { RPCCLIENT.close() };
-    return TRUE;
+    TRUE
 }
 
 #[no_mangle]
-pub extern "cdecl" fn request(h: HGLOBAL, len: *mut c_long) -> HGLOBAL {
+pub extern "cdecl" fn request(h: HGLOBAL, len: &mut c_long) -> HGLOBAL {
     // リクエストの取得
-    let v = unsafe { GStr::capture(h, *len as usize) };
+    let v = GStr::capture(h, *len as usize);
 
     let s = v.to_utf8_str().unwrap();
 
-    let pr = PluginRequest::parse(&s).unwrap();
+    let pr = PluginRequest::parse(s).unwrap();
     let r = pr.request;
 
     let response = events::handle_request(&r);
@@ -72,7 +92,7 @@ pub extern "cdecl" fn request(h: HGLOBAL, len: *mut c_long) -> HGLOBAL {
     let bytes = response.to_string().into_bytes();
     let response_gstr = GStr::clone_from_slice_nofree(&bytes);
 
-    unsafe { *len = response_gstr.len() as c_long };
+    *len = response_gstr.len() as c_long;
     response_gstr.handle()
 }
 
@@ -92,10 +112,7 @@ mod test {
         let activity = Activity::new()
             .state("t ")
             .timestamps(Timestamps::new().start(chrono::Local::now().timestamp()))
-            .buttons(vec![Button::new(
-                "配布元 / craftmanurl",
-                "https://example.com/",
-            )]);
+            .buttons(vec![Button::new("hoge", "https://example.com/")]);
         client.set_activity(activity).unwrap();
         std::thread::sleep(Duration::from_secs(10));
         client.close().unwrap();
