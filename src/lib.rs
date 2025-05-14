@@ -28,20 +28,45 @@ use simplelog::*;
 static mut RPCCLIENT: Lazy<RpcClient> = Lazy::new(RpcClient::new);
 
 #[no_mangle]
-pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
+pub extern "cdecl" fn loadu(h: HGLOBAL, len: c_long) -> BOOL {
     let v = GStr::capture(h, len as usize);
-    let s: String;
-    match v.to_utf8_str() {
+    let s = match v.to_utf8_str() {
         Ok(st) => {
             // UTF-8に変換
-            s = st.to_string();
+            st.to_string()
+        }
+        Err(e) => {
+            eprintln!("Failed to convert HGLOBAL to UTF-8: {:?}", e);
+            return FALSE;
+        }
+    };
+
+    match common_load_process(&s) {
+        Ok(_) => {
+            debug!("loadu");
+            TRUE
+        }
+        Err(_) => {
+            error!("load failed");
+            FALSE
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
+    let v = GStr::capture(h, len as usize);
+    let s = match v.to_utf8_str() {
+        Ok(st) => {
+            // UTF-8に変換
+            st.to_string()
         }
         Err(e) => {
             eprintln!("Failed to convert HGLOBAL to UTF-8: {:?}", e);
             match v.to_ansi_str() {
                 Ok(st) => {
                     // ANSIに変換
-                    s = st.to_string_lossy().to_string();
+                    st.to_string_lossy().to_string()
                 }
                 Err(e) => {
                     eprintln!("Failed to convert HGLOBAL to ANSI: {:?}", e);
@@ -51,8 +76,21 @@ pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
         }
     };
 
+    match common_load_process(&s) {
+        Ok(_) => {
+            debug!("load");
+            TRUE
+        }
+        Err(_) => {
+            error!("load failed");
+            FALSE
+        }
+    }
+}
+
+fn common_load_process(dll_dir: &str) -> Result<(), ()> {
     // Windows(UTF-16)を想定しPathBufでパスを作成
-    let log_path = PathBuf::from(&s).join("ukaing.log");
+    let log_path = PathBuf::from(dll_dir).join("ukaing.log");
     WriteLogger::init(
         LevelFilter::Debug,
         Config::default(),
@@ -64,10 +102,9 @@ pub extern "cdecl" fn load(h: HGLOBAL, len: c_long) -> BOOL {
         debug!("{}", panic_info);
     }));
 
-    debug!("load");
     unsafe { RPCCLIENT.start() };
 
-    TRUE
+    Ok(())
 }
 
 #[no_mangle]
